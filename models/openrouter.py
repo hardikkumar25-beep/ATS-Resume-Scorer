@@ -9,6 +9,7 @@ def getOpenRouterModel():
         base_url="https://openrouter.ai/api/v1",
         model='nvidia/nemotron-3-nano-30b-a3b:free',
         api_key=api_key,
+        temperature=0,
         model_info={
             "family": "nvidia",
             "vision":True,

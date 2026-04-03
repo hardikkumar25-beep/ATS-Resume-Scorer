@@ -1,32 +1,45 @@
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.document_loaders import TextLoader
 from langchain_community.document_loaders import Docx2txtLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-import faiss
-from langchain_community.docstore.in_memory import InMemoryDocstore
-from langchain_community.vectorstores import FAISS
-from uuid import uuid4
-from langchain_groq import ChatGroq
-import os
-from models.groq_openai import GetGroqModelClient
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
-from autogen_core.tools import FunctionTool
-from autogen_agentchat.agents import AssistantAgent
+from typing import List, Optional
 from dotenv import load_dotenv
 load_dotenv()
 
+class ExperienceEntry(BaseModel):
+    title: str = Field(description="Job title or role")
+    description: str = Field(description="Work done or responsibilities")
+    duration: str = Field(description="Duration (e.g., 2025-2026)")
+
+class ProjectEntry(BaseModel):
+    name: str = Field(description="Project name")
+    tech_stack: List[str] = Field(description="Technologies used in the project")
+    description: str = Field(description="What the project does")
+
+class EducationEntry(BaseModel):
+    degree: str = Field(description="Degree name (e.g., B.Tech)")
+    field: str = Field(description="Field of study (e.g., Computer Science)")
+    institution: str = Field(description="College or school name")
+    duration: str = Field(description="Years attended")
+
+class Skills(BaseModel):
+    technical: List[str] = Field(description="Programming languages and frameworks")
+    tools: List[str] = Field(description="Tools and platforms (Docker, AWS, Git, etc.)")
+    concepts: List[str] = Field(description="Concepts (ML, NLP, RAG, etc.)")
+
 class ResumeDetails(BaseModel):
-    name: str = Field(description="Full name of the candidate. Use 'Not Found' if missing.")
-    email: str = Field(description="Email address. Use 'Not Found' if missing.")
-    phone: str = Field(description="Phone number. Use 'Not Found' if missing.")
-    experience: str = Field(description="Work experience. Use 'Not Found' if missing.")
-    skills: str = Field(description="Skills. Use 'Not Found' if missing.")
-    education: str = Field(description="Education details. Use 'Not Found' if missing.")
-    certifications: str = Field(description="Certifications. Use 'Not Found' if missing.")
-    projects: str = Field(description="Projects. Use 'Not Found' if missing.")
+    name: str = Field(description="Full name of the candidate")
+    email: str = Field(description="Email address")
+    phone: str = Field(description="Phone number")
+    skills: Skills
+    experience: List[ExperienceEntry] = Field(description="List of work or project experiences")
+    total_experience_years: Optional[float] = Field(description="Total years of experience if available")
+    projects: List[ProjectEntry]
+    education: List[EducationEntry]
+    certifications: List[str] = Field(description="List of certifications. Empty list if none.")
+    keywords: List[str] = Field(description="Important keywords extracted from resume")
 
 def load_resume(file_path: str):
     if file_path.endswith(".pdf"):
@@ -59,31 +72,3 @@ def process_resume(llm,resume_path: str) -> dict:
         "resume_text": full_text,
         "format_instructions": output_parser.get_format_instructions()
     })
-
-# resume_extractor_tool = FunctionTool(
-#     process_resume,
-#     description="Extracts structured information from a resume file and returns JSON with candidate details"
-# )
-# SYSTEM_MESSAGE = """You are a Resume Processor Agent.
-
-# Your job is to help extract resume information using your resume extraction tool.
-
-# When asked to process a resume:
-# 1. Use the extract_resume_with_langchain tool with the file path
-# 2. The tool will return structured JSON data
-# 3. Analyze the returned data for completeness
-# 4. Report the extracted information to the user
-
-# If the tool returns an error, explain what went wrong and suggest fixes.
-# """
-# def getResumeAgent(model):
-#     resume_agent=AssistantAgent(
-#         name="ResumeProcessor",
-#         model_client=model,
-#         tools=[resume_extractor_tool],
-#         description="Processes resumes and extracts structured candidate information",
-#         system_message=SYSTEM_MESSAGE,
-#         reflect_on_tool_use=True)
-#     return resume_agent
-    
-
